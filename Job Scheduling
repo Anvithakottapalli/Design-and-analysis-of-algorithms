@@ -1,0 +1,87 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <climits>
+using namespace std;
+class Job {
+public:
+    int id;
+    int processing_time;
+
+    Job(int i, int p) : id(i), processing_time(p) {}
+};
+bool compareJobs(const Job& job1, const Job& job2) {
+    return job1.processing_time > job2.processing_time;
+}
+class Schedule {
+public:
+    vector<pair<Job, int>> assignments; // (Job, Machine)
+    int makespan() const {
+        vector<int> completion_times(assignments.size(), 0);
+        for (const auto& assignment : assignments) {
+            completion_times[assignment.second] += assignment.first.processing_time;
+        }
+        return *max_element(completion_times.begin(), completion_times.end());
+    }
+};
+void branchAndBound(const vector<Job>& jobs, int machines, Schedule& currentSchedule, Schedule& bestSchedule, int& bestMakespan, int jobIndex) {
+    if (jobIndex == jobs.size()) {
+        int currentMakespan = currentSchedule.makespan();
+        if (currentMakespan < bestMakespan) {
+            bestMakespan = currentMakespan;
+            bestSchedule = currentSchedule;
+        }
+        return;
+    }
+    for (int machine = 0; machine < min(machines, int(currentSchedule.assignments.size()) + 1); ++machine) {
+        currentSchedule.assignments.push_back({jobs[jobIndex], machine});
+        branchAndBound(jobs, machines, currentSchedule, bestSchedule, bestMakespan, jobIndex + 1);
+        currentSchedule.assignments.pop_back();
+    }
+}
+int main() {
+    int numJobs, numMachines;
+    cout << "Enter the number of jobs: ";
+    cin >> numJobs;
+    vector<Job> jobs;
+    for (int i = 1; i <= numJobs; ++i) {
+        int processingTime;
+        cout << "Enter processing time for Job " << i << " in hours : ";
+        cin >> processingTime;
+        jobs.push_back(Job(i, processingTime));
+    }
+    cout << "Enter the number of machines: ";
+    cin >> numMachines;
+    sort(jobs.begin(), jobs.end(), compareJobs);
+    Schedule currentSchedule, bestSchedule;
+    int bestMakespan = INT_MAX;
+    branchAndBound(jobs, numMachines, currentSchedule, bestSchedule, bestMakespan, 0);
+cout<<endl;
+cout<< "Best Schedule:" << endl;
+    for (const auto& assignment : bestSchedule.assignments) {
+        cout << "Job " << assignment.first.id << " on Machine " << (assignment.second + 1) << endl;
+    }
+    vector<vector<int>> scheduleMatrix(numMachines, vector<int>(numJobs * 2, 0));
+    for (const auto& assignment : bestSchedule.assignments) {
+        scheduleMatrix[assignment.second][assignment.first.id * 2 - 2] = assignment.first.processing_time / 10;
+        scheduleMatrix[assignment.second][assignment.first.id * 2 - 1] = assignment.first.processing_time % 10;
+    }
+    cout << "\nSchedule Matrix with rows for machines and columns for jobs" << endl;
+    for (int i = 0; i < numMachines; ++i) {
+        int s=0;
+        for (int j = 0; j < numJobs * 2; ++j) {
+            cout << scheduleMatrix[i][j];
+            s++;
+            if(s==2)
+            {
+                cout<<" ";
+                s=0;
+            }
+        }
+        cout << endl;
+    }
+    cout << endl << "Best Makespan: " << bestMakespan/24<<" day(s) and "<<bestMakespan%24<<" hour(s)" << endl;
+    return 0;
+}
+
+
